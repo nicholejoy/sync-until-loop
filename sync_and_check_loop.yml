@@ -1,0 +1,21 @@
+- name: Sync gzip files from folder
+  block:
+    - name: Set the retry count
+      set_fact:
+        retry_count: "{{ 0 if retry_count is undefined else retry_count|int + 1 }}"
+
+    - name: check for gzip files
+      find:
+        paths: '/shared_folder/'
+        patterns: "*.gzip"
+      register: files_found
+      failed_when: files_found.matched == 0 and retry_count|int == 200
+
+    - name: rsync gzip to installation controller
+      synchronize:
+        mode: pull
+        src: /shared_folder/
+        dest: /shared_folder/
+
+    - include_tasks: sync_and_check_loop.yml
+      when:  files_found.matched == 0 and retry_count|int < 200
